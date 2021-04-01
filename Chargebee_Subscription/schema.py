@@ -6,6 +6,10 @@ import requests
 
 from chargebee import ChargeBee, Subscription
 
+from testProg import customer
+
+chargebee.configure("test_qqu3aX84uFhM2zJe0qsIoI96NPfkfBtV","rsystems-test")
+
 class Subscription(graphene.ObjectType):
     id = graphene.String()
     planid = graphene.String(required=True)
@@ -33,6 +37,41 @@ class Subscription(graphene.ObjectType):
     dueinvoicescount = graphene.Int()
     mrr = graphene.Int()
 
+class BillingAddress(graphene.ObjectType):
+    city = graphene.String()
+    country = graphene.String()
+    first_name = graphene.String()
+    last_name = graphene.String()
+    line1 = graphene.String()
+    object = graphene.String()
+    state = graphene.String()
+    state_code = graphene.String()
+    validation_status = graphene.String()
+    zip = graphene.String()
+
+class Customer(graphene.ObjectType):
+    allowdirectdebit = graphene.Boolean()
+    autocollection = graphene.String()
+    cardstatus = graphene.String()
+    createdat = graphene.Int()
+    deleted = graphene.Boolean()
+    email = graphene.String()
+    excesspayments = graphene.Int()
+    firstname = graphene.String()
+    id = graphene.String()
+    lastname = graphene.String()
+    locale = graphene.String()
+    nettermdays = graphene.Int()
+    object = graphene.String()
+    piicleared = graphene.String()
+    preferredcurrencycode = graphene.String()
+    promotionalcredits = graphene.Int()
+    refundablecredits = graphene.Int()
+    resourceversion = graphene.Int()
+    taxability = graphene.String()
+    unbilledcharges = graphene.Int()
+    updatedat = graphene.Int()
+    billingaddress = graphene.Field(BillingAddress)
 
 class CreateSubscriptionResponse(graphene.ObjectType):
     card_status=graphene.String()
@@ -66,30 +105,40 @@ class CreateSubscription(graphene.Mutation):
         return CreateSubscription(subs)
 
 
-class CreateSubscriptionWithCustomFields(graphene.Mutation):
+class CreateCustomer(graphene.Mutation):
     class Arguments:
-        plan_id = graphene.String(required=True)
-        auto_collection = graphene.String()
-        cf_gender = graphene.String()
-        meta_data = graphene.String()
+        allowdirectdebit = graphene.Boolean()
+        autocollection = graphene.String()
+        cardstatus = graphene.String()
+        createdat = graphene.Int()
+        deleted = graphene.Boolean()
+        email = graphene.String()
+        excesspayments = graphene.Int()
+        firstname = graphene.String()
+        id = graphene.String()
+        lastname = graphene.String()
+        locale = graphene.String()
+        nettermdays = graphene.Int()
+        object = graphene.String()
+        piicleared = graphene.String()
+        preferredcurrencycode = graphene.String()
+        promotionalcredits = graphene.Int()
+        refundablecredits = graphene.Int()
+        resourceversion = graphene.Int()
+        taxability = graphene.String()
+        unbilledcharges = graphene.Int()
+        updatedat = graphene.Int()
 
-
-    subs = graphene.Field(Subscription)
-    def mutate(self, info, plan_id, auto_collection, cf_gender, meta_data):
-        #result = crete_custom_field_subscription(plan_id, auto_collection, cf_gender, meta_data)
-        #subscription = result.subscription
-        #customer = result.customer
-        #card = result.card
-        #invoice = result.invoice
-        #unbilled_charges = result.unbilled_charges
-
-        return CreateSubscriptionWithCustomFields(plan_id = plan_id, auto_collection = auto_collection, cf_gender = cf_gender, meta_data = meta_data)
-
-
+    cust = graphene.Field(Customer)
+    def mutate(self, info,firstname,lastname,email,locale):
+        result = create_customer(firstname,lastname,email,locale)
+        customer=result.customer
+        cust=Customer(id=customer.id,firstname=customer.first_name,lastname=customer.last_name,email=customer.email,locale=customer.locale)
+        return CreateCustomer(cust)
 
 class Mutations(graphene.ObjectType) :
     createSubscription = CreateSubscription.Field()
-    #createCustomField = CreateSubscriptionWithCustomFields.Field()
+    createCustomer = CreateCustomer.Field()
 
 
 class Query(graphene.ObjectType):
@@ -100,11 +149,9 @@ class Query(graphene.ObjectType):
 
 class Query(graphene.ObjectType):
     getsubscription = graphene.Field(Subscription, subscription_id=graphene.String())
-    # Resolver which generate response for a GraphQL query. Called by GraphQL
     def resolve_getsubscription(self, info, subscription_id):
-        result=getValue(subscription_id)
+        result=getSubscriptionDetail(subscription_id)
         subscription = result.subscription
-        customer = result.customer
         return Subscription(id = subscription.id,
             planid = subscription.plan_id,
             planquantity = subscription.plan_quantity,
@@ -131,13 +178,41 @@ class Query(graphene.ObjectType):
             dueinvoicescount = subscription.due_invoices_count,
             mrr = subscription.mrr)
 
-def getValue(subscription_id):
-    chargebee.configure("test_qqu3aX84uFhM2zJe0qsIoI96NPfkfBtV","rsystems-test")
+    getcustomer = graphene.Field(Customer, customer_id=graphene.String())
+    def resolve_getcustomer(self, info, customer_id):
+        result = getCustomerDetail(customer_id)
+        customer = result.customer
+        return Customer(
+            allowdirectdebit=customer.allow_direct_debit,
+            autocollection = customer.auto_collection,
+            cardstatus = customer.card_status,
+            createdat = customer.created_at,
+            deleted = customer.deleted,
+            email = customer.email,
+            excesspayments = customer.excess_payments,
+            firstname = customer.first_name,
+            id = customer.id,
+            lastname = customer.last_name,
+            locale = customer.locale,
+            nettermdays = customer.net_term_days,
+            object = customer.object,
+            piicleared = customer.pii_cleared,
+            preferredcurrencycode = customer.preferred_currency_code,
+            promotionalcredits = customer.promotional_credits,
+            refundablecredits = customer.refundable_credits,
+            resourceversion = customer.resource_version,
+            taxability = customer.taxability,
+            unbilledcharges = customer.unbilled_charges,
+            updatedat = customer.updated_at,
+            billingaddress = customer.billing_address
+        )
+
+def getSubscriptionDetail(subscription_id):
     result = chargebee.Subscription.retrieve(subscription_id)
-    subscription = result.subscription
-    customer = result.customer
-    card = result.card
-    print(subscription.id)
+    return result
+
+def getCustomerDetail(customer_id):
+    result = chargebee.Customer.retrieve(customer_id)
     return result
 
 def create_subscription(plan_id, auto_collection, billing_address, customer):
@@ -160,6 +235,24 @@ def create_subscription(plan_id, auto_collection, billing_address, customer):
             "email" : "john@user.com"
             }
         })
+    return result
+
+def create_customer(fname,lname,email,locale):
+    result = chargebee.Customer.create({
+        "first_name": fname,
+        "last_name": lname,
+        "email": email,
+        "locale": locale,
+        "billing_address" : {
+        "first_name" : "Test",
+        "last_name" : "Test",
+        "line1" : "PO Box 9999",
+        "city" : "Walnut",
+        "state" : "California",
+        "zip" : "91789",
+        "country" : "US"
+        }
+    })
     return result
 
 
@@ -251,5 +344,4 @@ def delete_addon():
     result = chargebee.Addon.delete("test")
     addon = result.addon
 
-#schema = graphene.Schema(query=Query, mutation=Mutations)
 schema = graphene.Schema(query=Query, mutation=Mutations)
